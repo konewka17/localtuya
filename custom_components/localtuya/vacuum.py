@@ -20,6 +20,7 @@ from homeassistant.components.vacuum import (
     SUPPORT_STATE,
     SUPPORT_STATUS,
     SUPPORT_STOP,
+    SUPPORT_SEND_COMMAND,
     StateVacuumEntity,
 )
 
@@ -128,6 +129,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             | SUPPORT_STOP
             | SUPPORT_STATUS
             | SUPPORT_STATE
+            | SUPPORT_SEND_COMMAND
         )
 
         if self.has_config(CONF_RETURN_MODE):
@@ -210,6 +212,10 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         if command == "set_mode" and "mode" in params:
             mode = params["mode"]
             await self._device.set_dp(mode, self._config[CONF_MODE_DP])
+        elif command == "clean_room":
+            base64_string = "eyJkSW5mbyI6eyJ0cyI6IjE3MDU1MDU1ODM0MzEiLCJ1c2VySWQiOiIwIn0sImRhdGEiOnsiY21kcyI6W3siZGF0YSI6eyJjbGVhbklkIjpbLTNdLCJleHRyYUFyZWFzIjpbXSwibWFwSWQiOjE2OTU2NjI1MzIsInNlZ21lbnRJZCI6WzRdfSwiaW5mb1R5cGUiOjIxMDIzfSx7ImRhdGEiOnsibW9kZSI6InJlQXBwb2ludENsZWFuIn0sImluZm9UeXBlIjoyMTAwNX1dLCJtYWluQ21kcyI6WzIxMDA1XX0sImluZm9UeXBlIjozMDAwMCwibWVzc2FnZSI6Im9rIn0"
+            _LOGGER.error(params)
+            await self._device.set_dp(base64_string, 127)
 
     def status_updated(self):
         """Device status was updated."""
