@@ -1,5 +1,8 @@
 """Platform to locally control Tuya-based vacuum devices."""
+import base64
+import json
 import logging
+import time
 from functools import partial
 
 import voluptuous as vol
@@ -213,8 +216,15 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             mode = params["mode"]
             await self._device.set_dp(mode, self._config[CONF_MODE_DP])
         elif command == "clean_room":
-            base64_string = "eyJkSW5mbyI6eyJ0cyI6IjE3MDU1MDU1ODM0MzEiLCJ1c2VySWQiOiIwIn0sImRhdGEiOnsiY21kcyI6W3siZGF0YSI6eyJjbGVhbklkIjpbLTNdLCJleHRyYUFyZWFzIjpbXSwibWFwSWQiOjE2OTU2NjI1MzIsInNlZ21lbnRJZCI6WzRdfSwiaW5mb1R5cGUiOjIxMDIzfSx7ImRhdGEiOnsibW9kZSI6InJlQXBwb2ludENsZWFuIn0sImluZm9UeXBlIjoyMTAwNX1dLCJtYWluQ21kcyI6WzIxMDA1XX0sImluZm9UeXBlIjozMDAwMCwibWVzc2FnZSI6Im9rIn0"
-            _LOGGER.error(params)
+            if params is None:
+                params = {}
+            room_id = params.get("room", 4)
+            map_id = params.get("map_id", 1695662532)
+            command_params = {'dInfo': {'ts': int(time.time() * 1000), 'userId': '0'}, 'data': {'cmds': [
+                {'data': {'cleanId': [-3], 'extraAreas': [], 'mapId': map_id, 'segmentId': [room_id]},
+                 'infoType': 21023}, {'data': {'mode': 'reAppointClean'}, 'infoType': 21005}], 'mainCmds': [21005]},
+                              'infoType': 30000, 'message': 'ok'}
+            base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
             await self._device.set_dp(base64_string, 127)
 
     def status_updated(self):
