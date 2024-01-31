@@ -85,6 +85,7 @@
                     "locate_dp": "Locate DP (Usually 31)",
                     "paused_state": "Pause state (pause, paused, etc)",
                     "stop_status": "Stop status",
+                    "position_base64_dp": "Base64 position DP",
                     "brightness": "Brightness (only for white color)",
                     "brightness_lower": "Brightness Lower Value",
                     "brightness_upper": "Brightness Upper Value",

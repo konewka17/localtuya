@@ -37,6 +37,7 @@ from .const import (
     CONF_RETURN_MODE,
     CONF_RETURNING_STATUS_VALUE,
     CONF_STOP_STATUS,
+    CONF_POSITION_BASE64_DP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ def flow_schema(dps):
         vol.Optional(CONF_FAULT_DP): vol.In(dps),
         vol.Optional(CONF_PAUSED_STATE, default=DEFAULT_PAUSED_STATE): str,
         vol.Optional(CONF_STOP_STATUS, default=DEFAULT_STOP_STATUS): str,
+        vol.Optional(CONF_POSITION_BASE64_DP): vol.In(dps),
     }
 
 
@@ -257,18 +259,19 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             if self._attrs[FAULT] != 0:
                 self._state = STATE_ERROR
 
-        # Added position for Bluebot
-        if "123" in status:
-            position = self.dps(123)
-            try:
-                decoded_json = json.loads(base64.b64decode(position))
-                position_array = decoded_json.get('data', {}).get('posArray', [])
+        if self.has_config(CONF_POSITION_BASE64_DP):
+            dp = self._config.get(CONF_POSITION_BASE64_DP)
+            if str(dp) in status:
+                position = self.dps_conf(CONF_POSITION_BASE64_DP)
+                try:
+                    decoded_json = json.loads(base64.b64decode(position))
+                    position_array = decoded_json.get('data', {}).get('posArray', [])
 
-                if position_array is not None and len(position_array) == 1:
-                    self._attrs[POSITION] = position_array[0]
-            except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
-                _LOGGER.debug("Couldn't parse position")
-                _LOGGER.debug(f"Raw message: {position}")
+                    if position_array is not None and len(position_array) == 1:
+                        self._attrs[POSITION] = position_array[0]
+                except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
+                    _LOGGER.debug("Couldn't parse position")
+                    _LOGGER.debug(f"Raw message: {position}")
 
 
 async_setup_entry = partial(async_setup_entry, DOMAIN, LocaltuyaVacuum, flow_schema)
