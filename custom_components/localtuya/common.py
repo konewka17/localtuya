@@ -408,7 +408,7 @@ class LocalTuyaEntity(RestoreEntity, pytuya.ContextualLogger):
             if self._status != status:
                 self._status = status.copy()
                 if status:
-                    self.status_updated()
+                    self.status_updated(status)
 
                 # Update HA
                 self.schedule_update_ha_state()
@@ -505,7 +505,7 @@ class LocalTuyaEntity(RestoreEntity, pytuya.ContextualLogger):
             )
         return self.dps(dp_index)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated.
 
         Override in subclasses and update entity specific state.

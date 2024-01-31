@@ -98,9 +98,9 @@ class LocaltuyaSelect(LocalTuyaEntity, SelectEntity):
         _LOGGER.debug("Sending Option: " + option + " -> " + option_value)
         await self._device.set_dp(option_value, self._dp_id)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
-        super().status_updated()
+        super().status_updated(status)
 
         state = self.dps(self._dp_id)
 

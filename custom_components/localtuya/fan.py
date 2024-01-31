@@ -208,7 +208,7 @@ class LocaltuyaFan(LocalTuyaEntity, FanEntity):
         _LOGGER.debug("Fan speed_count: %s", speed_count)
         return speed_count
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Get state of Tuya fan."""
         self._is_on = self.dps(self._dp_id)
 

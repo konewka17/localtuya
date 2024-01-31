@@ -51,9 +51,9 @@ class LocaltuyaBinarySensor(LocalTuyaEntity, BinarySensorEntity):
         """Return the class of this device."""
         return self._config.get(CONF_DEVICE_CLASS)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
-        super().status_updated()
+        super().status_updated(status)
 
         state = str(self.dps(self._dp_id)).lower()
         if state == self._config[CONF_STATE_ON].lower():

@@ -398,7 +398,7 @@ class LocaltuyaLight(LocalTuyaEntity, LightEntity):
         """Turn Tuya light off."""
         await self._device.set_dp(False, self._dp_id)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
         self._state = self.dps(self._dp_id)
         supported = self.supported_features

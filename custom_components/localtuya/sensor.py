@@ -58,7 +58,7 @@ class LocaltuyaSensor(LocalTuyaEntity):
         """Return the unit of measurement of this entity, if any."""
         return self._config.get(CONF_UNIT_OF_MEASUREMENT)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
         state = self.dps(self._dp_id)
         scale_factor = self._config.get(CONF_SCALING)

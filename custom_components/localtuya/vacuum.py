@@ -215,7 +215,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
             await self._device.set_dp(base64_string, 127)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
         state_value = str(self.dps(self._dp_id))
 

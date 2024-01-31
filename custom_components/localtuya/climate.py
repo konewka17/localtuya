@@ -357,7 +357,7 @@ class LocaltuyaClimate(LocalTuyaEntity, ClimateEntity):
         else:
             return DEFAULT_MAX_TEMP
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
         self._state = self.dps(self._dp_id)
 

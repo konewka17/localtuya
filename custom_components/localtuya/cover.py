@@ -184,7 +184,7 @@ class LocaltuyaCover(LocalTuyaEntity, CoverEntity):
                 self._current_cover_position = stored_pos
                 self.debug("Restored cover position %s", self._current_cover_position)
 
-    def status_updated(self):
+    def status_updated(self, status):
         """Device status was updated."""
         self._previous_state = self._state
         self._state = self.dps(self._dp_id)
