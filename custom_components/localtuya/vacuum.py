@@ -1,5 +1,6 @@
 """Platform to locally control Tuya-based vacuum devices."""
 import base64
+import binascii
 import json
 import logging
 import time
@@ -257,16 +258,17 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                 self._state = STATE_ERROR
 
         # Added position for Bluebot
-        position = self.dps(123)
-        if position is not None:
+        if "123" in status:
+            position = self.dps(123)
             try:
-                position = json.loads(base64.b64decode(position + '=='))['data']['posArray']
-                if len(position) == 1:
-                    self._attrs[POSITION] = position[0]
-                else:
-                    self._attrs[PATH] = position
-            except:
+                decoded_json = json.loads(base64.b64decode(position))
+                position_array = decoded_json.get('data', {}).get('posArray', [])
+
+                if position_array is not None and len(position_array) == 1:
+                    self._attrs[POSITION] = position_array[0]
+            except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
                 _LOGGER.debug("Couldn't parse position")
+                _LOGGER.debug(f"Raw message: {position}")
 
 
 async_setup_entry = partial(async_setup_entry, DOMAIN, LocaltuyaVacuum, flow_schema)
