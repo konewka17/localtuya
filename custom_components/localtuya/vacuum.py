@@ -46,6 +46,7 @@ CLEAN_RECORD = "clean_record"
 MODES_LIST = "cleaning_mode_list"
 MODE = "cleaning_mode"
 FAULT = "fault"
+POSITION = "position"
 
 DEFAULT_IDLE_STATUS = "standby,sleep"
 DEFAULT_RETURNING_STATUS = "docking"
@@ -253,6 +254,12 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             self._attrs[FAULT] = self.dps_conf(CONF_FAULT_DP)
             if self._attrs[FAULT] != 0:
                 self._state = STATE_ERROR
+
+        position = self.dps(123)
+        _LOGGER.debug(f"Position (base64): {position}")
+        if position is not None:
+            self._attrs[POSITION] = json.loads(base64.b64decode(position + '=='))['data']['posArray']
+            _LOGGER.debug(f"Position (decoded): {base64.b64decode(position + '==')}")
 
 
 async_setup_entry = partial(async_setup_entry, DOMAIN, LocaltuyaVacuum, flow_schema)
