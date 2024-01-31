@@ -47,6 +47,7 @@ MODES_LIST = "cleaning_mode_list"
 MODE = "cleaning_mode"
 FAULT = "fault"
 POSITION = "position"
+PATH = "path"
 
 DEFAULT_IDLE_STATUS = "standby,sleep"
 DEFAULT_RETURNING_STATUS = "docking"
@@ -255,11 +256,17 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             if self._attrs[FAULT] != 0:
                 self._state = STATE_ERROR
 
+        # Added position for Bluebot
         position = self.dps(123)
-        _LOGGER.debug(f"Position (base64): {position}")
         if position is not None:
-            self._attrs[POSITION] = json.loads(base64.b64decode(position + '=='))['data']['posArray']
-            _LOGGER.debug(f"Position (decoded): {base64.b64decode(position + '==')}")
+            try:
+                position = json.loads(base64.b64decode(position + '=='))['data']['posArray']
+                if len(position) == 1:
+                    self._attrs[POSITION] = position[0]
+                else:
+                    self._attrs[PATH] = position
+            except:
+                _LOGGER.debug("Couldn't parse position")
 
 
 async_setup_entry = partial(async_setup_entry, DOMAIN, LocaltuyaVacuum, flow_schema)
