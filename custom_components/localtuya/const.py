@@ -122,6 +122,9 @@ CONF_PAUSED_STATE = "paused_state"
 CONF_RETURN_MODE = "return_mode"
 CONF_STOP_STATUS = "stop_status"
 CONF_POSITION_BASE64_DP = "position_base64_dp"
+CONF_POSITION_RELATIVE_SCALE = "position_relative_scale"
+CONF_POSITION_RELATIVE_ORIGIN = "position_relative_origin"
+CONF_POSITION_AXIS_ROTATION = "position_axis_rotation"
 
 # number
 CONF_MIN_VALUE = "min_value"

@@ -38,6 +38,9 @@ from .const import (
     CONF_RETURNING_STATUS_VALUE,
     CONF_STOP_STATUS,
     CONF_POSITION_BASE64_DP,
+    CONF_POSITION_RELATIVE_SCALE,
+    CONF_POSITION_RELATIVE_ORIGIN,
+    CONF_POSITION_AXIS_ROTATION,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +53,7 @@ MODE = "cleaning_mode"
 FAULT = "fault"
 POSITION = "position"
 PATH = "path"
+RELATIVE_POSITION = "relative_position"
 
 DEFAULT_IDLE_STATUS = "standby,sleep"
 DEFAULT_RETURNING_STATUS = "docking"
@@ -84,6 +88,9 @@ def flow_schema(dps):
         vol.Optional(CONF_PAUSED_STATE, default=DEFAULT_PAUSED_STATE): str,
         vol.Optional(CONF_STOP_STATUS, default=DEFAULT_STOP_STATUS): str,
         vol.Optional(CONF_POSITION_BASE64_DP): vol.In(dps),
+        vol.Optional(CONF_POSITION_RELATIVE_SCALE): float,
+        vol.Optional(CONF_POSITION_RELATIVE_ORIGIN): str,
+        vol.Optional(CONF_POSITION_AXIS_ROTATION): int,
     }
 
 
@@ -114,8 +121,19 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         if self.has_config(CONF_FAN_SPEEDS):
             self._fan_speed_list = self._config[CONF_FAN_SPEEDS].split(",")
 
-        if self.has_config(CONF_POSITION_BASE64_DP):
-            self._attrs[PATH] = []
+        self._attrs[PATH] = []
+
+        self._position_relative_scale = 1
+        if self.has_config(CONF_POSITION_RELATIVE_SCALE):
+            self._position_relative_scale = self._config[CONF_POSITION_RELATIVE_SCALE]
+
+        self._position_relative_origin = [0, 0]
+        if self.has_config(CONF_POSITION_RELATIVE_ORIGIN):
+            self._position_relative_origin = json.loads(self._config[CONF_POSITION_RELATIVE_ORIGIN])
+
+        self._position_axis_rotation = 0
+        if self.has_config(CONF_POSITION_AXIS_ROTATION):
+            self._position_axis_rotation = self._config[CONF_POSITION_AXIS_ROTATION]
 
         self._fan_speed = ""
         self._cleaning_mode = ""
@@ -221,6 +239,25 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
             await self._device.set_dp(base64_string, 127)
 
+    def get_relative_position(self):
+        position = self._attrs.get(POSITION, None)
+        if position is None:
+            return None
+        px, py = position
+        if self._position_axis_rotation == 0:
+            px, py = px, -py
+        elif self._position_axis_rotation == 1:
+            px, py = py, px
+        elif self._position_axis_rotation == 2:
+            px, py = -px, py
+        elif self._position_axis_rotation == 3:
+            px, py = -px, -py
+
+        px = px * self._position_relative_scale + self._position_relative_origin[0]
+        py = py * self._position_relative_scale + self._position_relative_origin[1]
+
+        return [px, py]
+
     def status_updated(self, status):
         """Device status was updated."""
         state_value = str(self.dps(self._dp_id))
@@ -279,7 +316,10 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                         new_position = position_array[0]
                         if last_position != new_position:
                             self._attrs[POSITION] = new_position
-                            self._attrs[PATH].append(new_position)
+                            relative_position = self.get_relative_position()
+                            if relative_position is not None:
+                                self._attrs[RELATIVE_POSITION] = relative_position
+                                self._attrs[PATH].append(relative_position)
                 except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
                     _LOGGER.debug("Couldn't parse position")
                     _LOGGER.debug(f"Raw message: {position}")
