@@ -114,6 +114,9 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         if self.has_config(CONF_FAN_SPEEDS):
             self._fan_speed_list = self._config[CONF_FAN_SPEEDS].split(",")
 
+        if self.has_config(CONF_POSITION_BASE64_DP):
+            self._attrs[PATH] = []
+
         self._fan_speed = ""
         self._cleaning_mode = ""
         _LOGGER.debug("Initialized vacuum [%s]", self.name)
@@ -122,12 +125,12 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
     def supported_features(self):
         """Flag supported features."""
         supported_features = (
-            VacuumEntityFeature.START
-            | VacuumEntityFeature.PAUSE
-            | VacuumEntityFeature.STOP
-            | VacuumEntityFeature.STATUS
-            | VacuumEntityFeature.STATE
-            | VacuumEntityFeature.SEND_COMMAND
+                VacuumEntityFeature.START
+                | VacuumEntityFeature.PAUSE
+                | VacuumEntityFeature.STOP
+                | VacuumEntityFeature.STATUS
+                | VacuumEntityFeature.STATE
+                | VacuumEntityFeature.SEND_COMMAND
         )
 
         if self.has_config(CONF_RETURN_MODE):
@@ -221,6 +224,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
     def status_updated(self, status):
         """Device status was updated."""
         state_value = str(self.dps(self._dp_id))
+        previous_state = self._state
 
         if state_value in self._idle_status_list:
             self._state = STATE_IDLE
@@ -232,6 +236,10 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             self._state = STATE_PAUSED
         else:
             self._state = STATE_CLEANING
+
+        if previous_state == STATE_DOCKED and self._state != STATE_DOCKED:
+            self._attrs[PATH] = []
+            _LOGGER.info("Resetting PATH")
 
         if self.has_config(CONF_BATTERY_DP):
             self._battery_level = self.dps_conf(CONF_BATTERY_DP)
@@ -260,15 +268,18 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                 self._state = STATE_ERROR
 
         if self.has_config(CONF_POSITION_BASE64_DP):
-            dp = self._config.get(CONF_POSITION_BASE64_DP)
-            if str(dp) in status:
+            if str(self._config.get(CONF_POSITION_BASE64_DP)) in status:
                 position = self.dps_conf(CONF_POSITION_BASE64_DP)
                 try:
                     decoded_json = json.loads(base64.b64decode(position))
                     position_array = decoded_json.get('data', {}).get('posArray', [])
 
                     if position_array is not None and len(position_array) == 1:
-                        self._attrs[POSITION] = position_array[0]
+                        last_position = self._attrs.get(POSITION, None)
+                        new_position = position_array[0]
+                        if last_position != new_position:
+                            self._attrs[POSITION] = new_position
+                            self._attrs[PATH].append(new_position)
                 except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
                     _LOGGER.debug("Couldn't parse position")
                     _LOGGER.debug(f"Raw message: {position}")
