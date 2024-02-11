@@ -224,12 +224,13 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
 
     async def async_send_command(self, command, params=None, **kwargs):
         """Send a command to a vacuum cleaner."""
+        if params is None:
+            params = {}
+
         if command == "set_mode" and "mode" in params:
             mode = params["mode"]
             await self._device.set_dp(mode, self._config[CONF_MODE_DP])
         elif command == "clean_room":
-            if params is None:
-                params = {}
             room_id = params.get("room", 4)
             map_id = params.get("map_id", 1695662532)
             command_params = {'dInfo': {'ts': int(time.time() * 1000), 'userId': '0'}, 'data': {'cmds': [
@@ -238,12 +239,25 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                               'infoType': 30000, 'message': 'ok'}
             base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
             await self._device.set_dp(base64_string, 127)
+        elif command == "clean_spot":
+            x = params.get("x", .5)
+            y = params.get("y", .5)
+            size = params.get("size", 300)
+            x, y = self.calculate_absolute_position(x, y)
+            _LOGGER.info(f"Absolute position: {x, y}")
 
-    def get_relative_position(self):
-        position = self._attrs.get(POSITION, None)
-        if position is None:
-            return None
-        px, py = position
+            map_id = params.get("map_id", 1695662532)
+            command_params = {'dInfo': {'ts': int(time.time() * 1000), 'userId': '0'}, 'data': {'cmds': [
+                {'data': {'cleanId': [-3], 'extraAreas': [
+                    {"active": "depth", "id": 100, "mode": "point", "name": "aa", "tag": "room",
+                     "vertexs": [[x - size/2, y - size/2], [x - size/2, y + size/2], [x + size/2, y + size/2], [x + size/2, y - size/2]]}],
+                          'mapId': map_id, 'segmentId': []}, 'infoType': 21023},
+                {'data': {'mode': 'reAppointClean'}, 'infoType': 21005}], 'mainCmds': [21005]}, 'infoType': 30000,
+                              'message': 'ok'}
+            base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
+            await self._device.set_dp(base64_string, 127)
+
+    def rotate_coordinates(self, px, py):
         if self._position_axis_rotation == 0:
             px, py = px, -py
         elif self._position_axis_rotation == 1:
@@ -252,11 +266,27 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             px, py = -px, py
         elif self._position_axis_rotation == 3:
             px, py = -px, -py
+        return px, py
+
+    def get_relative_position(self):
+        position = self._attrs.get(POSITION, None)
+        if position is None:
+            return None
+        px, py = position
+        px, py = self.rotate_coordinates(px, py)
 
         px = px * self._position_relative_scale + self._position_relative_origin[0]
         py = py * self._position_relative_scale + self._position_relative_origin[1]
 
         return [px, py]
+
+    def calculate_absolute_position(self, x, y):
+        px = (x - self._position_relative_origin[0]) / self._position_relative_scale
+        py = (y - self._position_relative_origin[1]) / self._position_relative_scale
+
+        px, py = self.rotate_coordinates(px, py)
+
+        return round(px), round(py)
 
     def status_updated(self, status):
         """Device status was updated."""
