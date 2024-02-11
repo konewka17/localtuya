@@ -367,7 +367,8 @@ def parse_header(data):
 
     # sanity check. currently the max payload length is somewhere around 300 bytes
     if payload_len > 1000:
-        raise DecodeError(
+        # TS: changed to warning
+        _LOGGER.warning(
             "Header claims the packet size is over 1000 bytes! It is most likely corrupt. Claimed size: %d bytes"
             % payload_len
         )

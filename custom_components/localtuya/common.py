@@ -482,7 +482,7 @@ class LocalTuyaEntity(RestoreEntity, pytuya.ContextualLogger):
         """Return cached value for DPS index."""
         value = self._status.get(str(dp_index))
         if value is None:
-            self.warning(
+            self.debug(
                 "Entity %s is requesting unknown DPS index %s",
                 self.entity_id,
                 dp_index,
