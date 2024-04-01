@@ -15,7 +15,8 @@ from homeassistant.components.vacuum import (
     STATE_IDLE,
     STATE_PAUSED,
     STATE_RETURNING,
-    StateVacuumEntity, VacuumEntityFeature,
+    StateVacuumEntity,
+    VacuumEntityFeature,
 )
 
 from .common import LocalTuyaEntity, async_setup_entry
@@ -222,6 +223,14 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         """Set the fan speed."""
         await self._device.set_dp(fan_speed, self._config[CONF_FAN_SPEED_DP])
 
+    def get_command_params_clean(self, vertices, map_id):
+        return {'dInfo': {'ts': int(time.time() * 1000), 'userId': '0'}, 'data': {'cmds': [
+            {'data': {'cleanId': [-3], 'extraAreas': [
+                {"active": "depth", "id": 100, "mode": "point", "name": "aa", "tag": "room",
+                 "vertexs": vertices}], 'mapId': map_id, 'segmentId': []}, 'infoType': 21023},
+            {'data': {'mode': 'reAppointClean'}, 'infoType': 21005}], 'mainCmds': [21005]}, 'infoType': 30000,
+                'message': 'ok'}
+
     async def async_send_command(self, command, params=None, **kwargs):
         """Send a command to a vacuum cleaner."""
         if params is None:
@@ -247,13 +256,23 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             _LOGGER.info(f"Absolute position: {x, y}")
 
             map_id = params.get("map_id", 1695662532)
-            command_params = {'dInfo': {'ts': int(time.time() * 1000), 'userId': '0'}, 'data': {'cmds': [
-                {'data': {'cleanId': [-3], 'extraAreas': [
-                    {"active": "depth", "id": 100, "mode": "point", "name": "aa", "tag": "room",
-                     "vertexs": [[x - size/2, y - size/2], [x - size/2, y + size/2], [x + size/2, y + size/2], [x + size/2, y - size/2]]}],
-                          'mapId': map_id, 'segmentId': []}, 'infoType': 21023},
-                {'data': {'mode': 'reAppointClean'}, 'infoType': 21005}], 'mainCmds': [21005]}, 'infoType': 30000,
-                              'message': 'ok'}
+            command_params = self.get_command_params_clean(
+                [[x - size / 2, y - size / 2], [x - size / 2, y + size / 2], [x + size / 2, y + size / 2],
+                 [x + size / 2, y - size / 2]], map_id)
+            base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
+            await self._device.set_dp(base64_string, 127)
+        elif command == "clean_area":
+            if 'vertices' in params:
+                vertices = params['vertices']
+            else:
+                relative_vertices = params.get("relative_vertices", [])
+                vertices = []
+                for x, y in relative_vertices:
+                    x, y = self.calculate_absolute_position(x, y)
+                    vertices.append([x, y])
+
+            map_id = params.get("map_id", 1695662532)
+            command_params = self.get_command_params_clean(vertices, map_id)
             base64_string = base64.b64encode(json.dumps(command_params).encode('utf-8')).decode('utf-8')
             await self._device.set_dp(base64_string, 127)
 
