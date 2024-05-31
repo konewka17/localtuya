@@ -368,7 +368,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                             relative_position = self.get_relative_position()
                             if relative_position is not None:
                                 self._attrs[RELATIVE_POSITION] = relative_position
-                                self._attrs[PATH].append(relative_position)
+                                # self._attrs[PATH].append(relative_position)
                 except (json.JSONDecodeError, TypeError, IndexError, binascii.Error):
                     _LOGGER.debug("Couldn't parse position")
                     _LOGGER.debug(f"Raw message: {position}")
